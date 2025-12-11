@@ -121,6 +121,25 @@ $$\begin{align*}
 
 Diese Kombination von Attention, Layer Norm und Residual Connections bildet den Transformer Block, den wir sechsmal gestapelt haben (n_layer=6).
 
+# Nächste Schritte zur Verbesserung von nanoChat
+
+## Fünf Schlüsselaspekte
+
+1. ⚙️ Die Architektur-Optimierung (Tokenization)
+Ihr aktuelles Modell nutzt Character-Level Tokenization. Das ist ineffizient und limitiert die Modellleistung drastisch, weil das Modell die Semantik von Wörtern nicht erkennt.
+
+✅ Aktion: Wechsel zu BPE (Byte-Pair Encoding)
+- Problem: Das Vokabular ist zu klein (nur ca. 65 Zeichen). Das Modell muss jedes Wort aus diesen 65 Zeichen zusammensetzen. Es verschwendet Attention-Kapazität für die Rechtschreibung.
+
+- Lösung: Implementieren Sie einen Subword Tokenizer wie BPE.
+
+  - Werkzeug: Nutzen Sie tiktoken (das ist der OpenAI-Tokenizer) oder die tokenizers-Bibliothek von Hugging Face.
+
+  - Ergebnis: Das Vokabular wächst (z.B. auf 5.000 oder 10.000 Tokens), aber häufige Wörter wie "the", "and" oder "ing" werden zu einem einzigen Token. Dies erhöht die Informationsdichte der Eingabe signifikant.
+
+- Effekt: Sie verbessern die Flüssigkeit (Fluency) und die Kohärenz des generierten Textes dramatisch.
+
+
 
 ## Training von Transformern
 
