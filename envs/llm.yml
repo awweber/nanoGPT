@@ -1,0 +1,27 @@
+name: llm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - git
+  - numpy
+  - pyyaml
+  - ipykernel
+  - notebook
+  - jupyterlab
+  - pip:
+    - torch>=2.0.0
+    - torchvision
+    - torchaudio
+    - transformers>=4.30.0
+    - accelerate
+    - datasets
+    - sentence-transformers
+    - peft
+    - safetensors
+    - tokenizers
+
+# Optimized for Apple Silicon (M4) with MPS (Metal Performance Shaders) support
+# PyTorch will automatically use MPS when available for GPU acceleration
