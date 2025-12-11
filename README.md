@@ -1,4 +1,4 @@
-# Nanochat: Ein Mini-LLM auf deinem MacBook Air M4
+# Nanochat: Ein nano-LLM
 
 Das hier ist eine Schritt-für-Schritt-Anleitung, um ein winziges Sprachmodell (LLM) zu bauen, das Shakespeare-ähnlichen Text generiert. Wir nutzen dabei die Transformer-Architektur, die auch in großen Modellen wie GPT-4 verwendet wird, aber in einer stark vereinfachten Form. Es basiert auf dem berühmten Shakespeare-Datensatz, der öffentlich verfügbar ist.
 
@@ -6,8 +6,10 @@ Das Beispiel hier basiert auf nanochat von Andrej Karpathy, das quasi das „Hel
 
 ## Voraussetzungen
 - Grundkenntnisse in Python und PyTorch
-- Ein MacBook Air M4 mit macOS Ventura oder neuer
 - Installation von Python 3.8+ und PyTorch mit MPS-Unterstützung
+
+Hinweis: Training wurde auf einem MacBook Air M4 mit macOS Ventura oder neuer durchgeführt. Devices: CPU und MPS (Apple Silicon GPU)
+
 
 Datensatz: Du kannst den Shakespeare-Datensatz von [hier](https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt) herunterladen.
 ```shell
