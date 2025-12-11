@@ -120,3 +120,63 @@ $$\begin{align*}
 \end{align*}$$
 
 Diese Kombination von Attention, Layer Norm und Residual Connections bildet den Transformer Block, den wir sechsmal gestapelt haben (n_layer=6).
+
+
+## Training von Transformern
+
+Das Training mit Batches und Gradienten in den $Q, K, V$ Matrizen ist im Grunde die Anwendung der Kettenregel der Differentialrechnung auf die gesamte, sehr lange Formel des Transformer-Blocks.
+
+**I. Die Rolle der Batches (Parallelisierung)**
+
+Im Gegensatz zum Bigram-Modell, das nur ein Token zurzeit betrachtet, erlauben Batches dem Transformer, extrem effizient zu arbeiten:
+1. Parallelisierung: Im Training führen wir nicht nur eine Sequenz (z.B. einen Satz) durch den Transformer, sondern $B$ Sequenzen parallel (batch_size = 64).
+2. Effizienz: Die gesamte Berechnung der $Q, K, V$ Matrizen für alle Tokens in allen $B$ Sequenzen erfolgt auf der GPU (deinem M4 Chip) in einem einzigen, massiven Matrixmultiplikationsschritt.
+3. Stabilität: Das Training auf Batches führt zu einer stabileren Schätzung des Gesamtgradienten und hilft dem Optimierer, schneller und zuverlässiger zu konvergieren.
+
+Der Input in den $Q, K, V$ Schichten ist somit nicht nur das Embedding eines Tokens, sondern ein großer Tensor der Dimension $(B, T, d_{\text{model}})$, der durch die $W_Q, W_K, W_V$ Matrizen läuft.
+
+II. Die lernbaren Parameter
+
+Die $Q, K, V$ Vektoren selbst sind keine lernbaren Parameter. Sie sind das Ergebnis der Multiplikation.Die eigentlichen lernbaren Parameter sind die drei Gewichtsmatrizen (Weight Matrices):
+- $W_Q$ (für die Query-Projektion)
+- $W_K$ (für die Key-Projektion)
+- $W_V$ (für die Value-Projektion)
+Diese Matrizen werden zu Beginn zufällig initialisiert und enthalten alle Informationen, die das Attention-Modul lernt. Die Aufgabe des Trainings ist es, diese Matrizen so anzupassen, dass sie die optimalen $Q, K, V$ Vektoren produzieren.
+
+**III. Der Gradientenfluss (Backpropagation)**
+
+Der Trainingsprozess folgt immer diesen Schritten: Forward Pass $\to$ Loss $\to$ Backward Pass $\to$ Update.
+
+1. **Forward Pass & Loss**
+
+    1. Die Eingabedaten ($X$) laufen durch die $W_Q, W_K, W_V$ Matrizen, erzeugen die Attention-Gewichte, aggregieren die Values und erzeugen am Ende des Blocks einen Output.
+    2. Am Ende des gesamten Modells wird dieser Output mit den tatsächlichen Targets verglichen, um den Verlust (Loss $L$, bei uns Cross-Entropy) zu berechnen.
+
+2. **Backward Pass: Die Kettenregel**
+
+Der Loss $L$ ist der Ausgangspunkt. Die Backpropagation berechnet die Ableitung (den Gradienten) des Loss in Bezug auf alle Parameter. Das heißt, wir berechnen:
+
+$$\frac{\partial L}{\partial W_Q}, \quad \frac{\partial L}{\partial W_K}, \quad \frac{\partial L}{\partial W_V}$$
+
+Wie das Signal durch die Attention fließt:
+
+Das Fehlersignal muss rückwärts durch die gesamte Attention-Formel laufen:
+
+$$Attention(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}} + M\right)V$$
+
+- Der Gradient geht rückwärts durch $V$: Der Gradient des Loss kommt in den $V$-Pfad. Er muss berechnet werden in Bezug auf $W_V$, um zu lernen, welche Informationen (Values) gewichtet werden sollen.
+- Der Gradient geht rückwärts durch Softmax: Der Fehler muss durch die nicht-lineare Softmax-Funktion fließen, was die Berechnung kompliziert macht, aber essenziell ist.
+- Der Gradient teilt sich in $Q$ und $K$: Die komplexeste Stelle ist die Multiplikation $QK^T$. Der Fehler, der über die Attention Scores hereinkommt, muss auf die $Q$- und $K$-Matrizen aufgeteilt werden (Kettenregel).
+    - Der Gradient $\frac{\partial L}{\partial W_Q}$ sagt dem Modell: "Wenn ich dieses Token als Query hatte, war das Ergebnis falsch. Ich muss die Query-Repräsentation (die Wichtigkeit des Suchens) anpassen."
+    - Der Gradient $\frac{\partial L}{\partial W_K}$ sagt dem Modell: "Das Key-Vektor-Angebot dieses Tokens führte zu einem Fehler. Ich muss die Key-Repräsentation (das, was das Token anbietet) anpassen."
+
+3. **Update (Optimierer)**
+
+Nachdem die Gradienten $\frac{\partial L}{\partial W}$ für alle Gewichtsmatrizen (nicht nur $W_Q, W_K, W_V$, sondern auch die Feed-Forward-Layer) berechnet wurden, nutzt der Optimierer (z.B. AdamW) diese, um die Parameter zu aktualisieren:
+
+$$W_{\text{neu}} = W_{\text{alt}} - \eta \cdot \nabla L$$
+
+Wobei $\eta$ die Lernrate (learning_rate) ist. Die $W_Q, W_K, W_V$ Matrizen werden schrittweise in die Richtung des stärksten Abstiegs des Fehlers (entgegengesetzt zum Gradienten) verschoben. 
+- Mit jedem Schritt lernt das Modell, welche $Q$ am besten zu welchen $K$ passen, um am Ende die korrekten $V$ zu aggregieren.
+
+**Zusammenfassend**: Das Training eines Transformers ist ein hochparalleler Prozess, bei dem der vom Loss berechnete Fehler über die Kettenregel durch alle Schichten und jede einzelne Matrixmultiplikation zurückgereicht wird, um die Gewichte der $W_Q, W_K, W_V$ Matrizen anzupassen.
